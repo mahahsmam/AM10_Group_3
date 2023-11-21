@@ -1,0 +1,906 @@
+---
+title: "Data visualisation - Final Group Project – Poster Presentation"
+author: "Study Group 3 - Dan Thompson, Xi Chen, Alvaro Romero, Mahah Sadique, Guangbin Yu and Marie Dujardin"
+date: "21 November 2023"
+output:
+  html_document:
+    theme: journal
+    highlight: tango
+    number_sections: yes
+    toc: yes
+    toc_float: no
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE, eval = FALSE}
+library(tidyverse) # the usual stuff: dplyr, readr, and other goodies
+library(lubridate) # to handle dates
+library(GGally) # for correlation-scatter plot matrix
+library(ggfortify) # to produce residual diagnostic plots
+library(rsample) # to split dataframe in training- & testing sets
+library(janitor) # clean_names()
+library(broom) # use broom:augment() to get tidy table with regression output, residuals, etc
+library(huxtable) # to get summary table of all models produced
+library(caret) # to train more advanced models (k-fold cross-validation, stepwise regression, LASSO)
+library(nnet) # to calculate the maximum value of a vector
+library(pROC) # to plot ROC curves
+library(MLmetrics) #for caret LASSO logistic regression
+library(caret)
+library(glmnet)
+library(ROCR)
+library(ggplot2)
+library(survival)
+library(vroom)
+library(skimr)
+library(mice) 
+library(VIM)
+library(RColorBrewer)
+library(leaflet)
+library(leaflet.extras)
+library(viridisLite)
+library(viridis)
+library(scales)
+library(ggrepel)    # For repelling overlapping text labels in plots
+library(zoo)   
+library(mosaic)
+library(ggthemes)
+library(here)
+library(tidyquant)
+
+```
+
+```{r, load datasets, echo=FALSE, warning=FALSE, message=FALSE,}
+
+Region <- read_csv("~/Documents/Data visualisation/Region.csv")
+Case <- read_csv("~/Documents/Data visualisation/Case.csv")
+PatientInfo <- read_csv("~/Documents/Data visualisation/PatientInfo.csv")
+Policy <- read_csv("~/Documents/Data visualisation/Policy.csv")
+SearchTrend <- read_csv("~/Documents/Data visualisation/SearchTrend.csv")
+SeoulFloating <- read_csv("~/Documents/Data visualisation/SeoulFloating.csv")
+Time <- read_csv("~/Documents/Data visualisation/Time.csv")
+TimeAge <- read_csv("~/Documents/Data visualisation/TimeAge.csv")
+TimeGender <- read_csv("~/Documents/Data visualisation/TimeGender.csv")
+TimeProvince <- read_csv("~/Documents/Data visualisation/TimeProvince.csv")
+Weather <- read_csv("~/Documents/Data visualisation/Weather.csv")
+
+```
+# COVID-19 on The Map 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+
+# Filling in missing values of longitude and latitude based on the names of 
+# infection_case
+
+case_1 <- Case %>% group_by(infection_case) %>% select(province, latitude, 
+                                                       longitude, confirmed)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Coupang Logistics Center", 
+                          37.233581, case_1$latitude)  
+case_1$longitude <- ifelse(case_1$infection_case == "Coupang Logistics Center", 
+                           127.360893, case_1$longitude) 
+
+case_1$latitude <- ifelse(case_1$infection_case == "Gangnam Yeoksam-dong 
+                          gathering", 37.500259, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Gangnam Yeoksam-dong 
+                           gathering", 127.038737, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Geumcheon-gu rice milling 
+                          machine manufacture", 37.460568, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Geumcheon-gu rice milling 
+                           machine manufacture", 126.900830, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Sincheonji Church", 
+                          35.84008, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Sincheonji Church", 
+                           128.5667, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Seocho Family", 37.515324, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Seocho Family", 127.014225, 
+                           case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Orange Life", 37.503305, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Orange Life", 127.045828, 
+                           case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Shincheonji Church", 
+                          35.84008, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Shincheonji Church", 
+                           128.5667, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Itaewon Clubs", 37.534930, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Itaewon Clubs", 126.994520, 
+                           case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Korea Campus Crusade of 
+                          Christ", 37.594852, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Korea Campus Crusade of 
+                           Christ",126.967926, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Geumcheon-gu rice milling 
+                          machine manufacture", 37.460613, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Geumcheon-gu rice milling 
+                           machine manufacture", 126.901118, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Seoul City Hall Station 
+                          safety worker", 37.565701, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Seoul City Hall Station 
+                           safety worker", 126.976864, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Uijeongbu St. Mary’s 
+                          Hospital", 37.758598, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Uijeongbu St. Mary’s 
+                           Hospital", 127.077668, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Eunpyeong-Boksagol culture 
+                          center", 37.603601, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Eunpyeong-Boksagol culture 
+                           center", 126.927424, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Dongan Church", 37.593832, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Dongan Church", 127.057759, 
+                           case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Eunpyeong St. Mary's 
+                          Hospital", 37.633300, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Eunpyeong St. Mary's 
+                           Hospital", 126.917613, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Jongno Community Center", 
+                          37.574463, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Jongno Community Center", 
+                           126.964505, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Samsung Medical Center", 
+                          37.487436, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Samsung Medical Center", 
+                           127.084983, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "KB Life Insurance", 
+                          37.524524, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "KB Life Insurance", 
+                           126.924621, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Samsung Fire & Marine 
+                          Insurance", 37.569246, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Samsung Fire & Marine 
+                           Insurance", 127.061769, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Haeundae-gu Catholic 
+                          Church", 35.163898, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Haeundae-gu Catholic 
+                           Church", 129.164522, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Fatima Hospital", 35.883999, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Fatima Hospital", 
+                           128.623859, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Dunsan Electronics Town", 
+                          36.339820, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Dunsan Electronics Town", 
+                           127.394966, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Ministry of Oceans and 
+                          Fisheries", 36.504487, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Ministry of Oceans and 
+                           Fisheries", 127.265410, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Bundang Jesaeng Hospital", 
+                          37.388157, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Bundang Jesaeng Hospital", 
+                           127.121753, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Goesan-gun Jangyeon-myeon", 
+                          36.835064, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Goesan-gun Jangyeon-myeon", 
+                           127.934339, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Hanmaeum Changwon Hospital", 
+                          35.221051, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Hanmaeum Changwon Hospital", 
+                           128.686697, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Yangcheon Table Tennis 
+                          Club", 37.545121, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Yangcheon Table Tennis 
+                           Club", 126.862415, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Guro-gu Call Center", 
+                          37.482466, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Guro-gu Call Center", 
+                           126.889889, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Manmin Central Church", 
+                          37.275929, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Manmin Central Church", 
+                           127.448461, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Wangsung Church", 37.481782, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Wangsung Church", 
+                           126.929964, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Jung-gu Fashion Company", 
+                          37.569287, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Jung-gu Fashion Company", 
+                           127.008984, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Yeongdeungpo Learning 
+                          Institute", 37.513190, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Yeongdeungpo Learning 
+                           Institute", 126.914717, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Uiwang Logistics Centere", 
+                          37.362416, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Uiwang Logistics Center", 
+                           126.989844, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Jin-gu Academy", 35.822701, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Jin-gu Academy", 
+                           128.639709, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Cheongdo Daenam Hospital", 
+                          35.647365, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Cheongdo Daenam Hospital", 
+                           128.733907, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Orange Town", 36.339701, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Orange Town", 127.390509, 
+                           case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Lord Glory Church", 
+                          37.491842, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Lord Glory Church", 
+                           126.983049, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Suwon Saeng Myeong Saem 
+                          Church", 37.563267, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Suwon Saeng Myeong Saem 
+                           Church", 126.987304, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Gyeongsan Jeil Silver Town", 
+                          35.833864, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Gyeongsan Jeil Silver 
+                           Town", 128.809070, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Gyeongsan Cham Joeun 
+                          Community Center", 35.832055, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Gyeongsan Cham Joeun 
+                           Community Center", 128.753115, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Geochang-gun 
+                          Woongyang-myeon", 35.832104, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Geochang-gun 
+                           Woongyang-myeon", 127.924074, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Changnyeong Coin Karaoke", 
+                          35.800795, case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Changnyeong Coin Karaoke", 
+                           128.491157, case_1$longitude)
+
+case_1$latitude <- ifelse(case_1$infection_case == "Soso Seowon", 36.924874, 
+                          case_1$latitude)
+case_1$longitude <- ifelse(case_1$infection_case == "Soso Seowon", 128.580175, 
+                           case_1$longitude)
+
+case_1
+```
+
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+
+# Covert data type of latitude and longitude
+case_1$latitude <- as.numeric(case_1$latitude)
+case_1$longitude <- as.numeric(case_1$longitude)
+
+# Remove missing data points
+case_1 <- na.omit(case_1)
+
+# Label cases on the map of South Korea
+map <- case_1 %>%
+  leaflet() %>%
+  addProviderTiles(providers$Esri) %>% 
+  addCircleMarkers(lng = ~ longitude, 
+                   lat = ~ latitude, 
+                   radius = ~ 4, 
+                   fillOpacity = 0.6, 
+                   popup = ~ confirmed,
+                   label = ~ infection_case,
+                   fill = ~ confirmed,
+                   stroke = FALSE
+                   ) 
+map
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Calculate percentages for each province
+case_2 <- Case %>% 
+  group_by(province) %>% 
+  summarise(sum = sum(confirmed)) %>%
+  ungroup() %>% 
+  mutate(percentage = sum / sum(sum) * 100)
+
+# Create a bar chart to visualize the percentage
+case_2 <- case_2 %>%
+  mutate(bar_color = ifelse(percentage == max(percentage), "dodgerblue2", "blue4"))
+
+ggplot(case_2, aes(x = reorder(province, percentage), y = percentage, fill = bar_color)) +
+  geom_bar(stat = "identity") +
+  scale_fill_identity() +
+  xlab("Province") +
+  ylab(NULL) +
+  geom_text(
+    aes(label = sprintf("%.1f%%", percentage)), 
+    position = position_nudge(y = 5), 
+    vjust = 0, 
+    size = 3,  
+    color = "black",  
+    show.legend = FALSE
+  ) +
+  coord_flip() +
+  theme_minimal() +
+  ggtitle("Daegu Leads in COVID-19 Cases Among Korean Provinces") +
+  labs(subtitle = "Percentage of Confirmed Cases in Each of the 17 Korean Provinces") +
+  theme(
+    panel.grid.major.y = element_blank(),
+    plot.title = element_text(size = 13, face = "bold", hjust = -1.78),
+    plot.subtitle = element_text(size = 11, hjust = -1.07),
+    legend.position = "none"
+  ) +
+  scale_y_continuous(labels = percent_format(scale = 1))
+```
+
+
+# Impact of Demographic Factors on COVID-19
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+
+# Visualization 1: Impact of Demographic Factors on Case number
+Patient_analysis <- PatientInfo %>%
+  group_by(age, sex) %>%
+  summarise(count = n()) %>% 
+  filter(!is.na(age)& !is.na(sex) & age != "100s")
+
+ggplot(Patient_analysis, aes(x = age, y = count, fill = sex)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  theme_minimal() +
+  labs(title = "Dominant COVID-19 Incidence in Women, Peaking Among Those in Their 20s", 
+       subtitle = "Age and Gender Distribution of COVID-19 Cases in South Korea", 
+       x = "Age",
+       y = "Number of COVID cases") +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  )+
+  scale_fill_manual(values = c("blue4", "dodgerblue2")) 
+
+# Visualization 2: Impact of Demographic Factors on Mortality 
+
+Patient_analysis2 <- PatientInfo %>%
+  filter(state =="deceased") %>%
+  group_by(age, sex) %>%
+  summarise(count = n()) %>% 
+  filter(!is.na(age)& !is.na(sex))
+
+ggplot(Patient_analysis2, aes(x = age, y = count, fill = sex)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  theme_minimal() +
+  labs(title = "Highest COVID-19 Mortality Observed in Women Aged 80 and Above", 
+       subtitle = "Age and Gender Distribution of COVID-19 Mortality in South Korea", 
+       x = "Age",
+       y = "Number of People Deceased from COVID-19") +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  ) +
+  scale_fill_manual(values = c("blue4", "dodgerblue2")) 
+
+# Visualization 3: Gender-wise Case Distribution Over Time
+TimeGender_cleaned <- TimeGender %>%
+  group_by(sex) %>%
+  mutate(
+    new_confirmed = ifelse(row_number() == 1, confirmed, confirmed - lag(confirmed)),
+    new_deceased = ifelse(row_number() == 1, deceased, deceased - lag(deceased)),
+    date = as.Date(date, format="%Y-%m-%d")  # Ensure date is in Date format
+  ) %>%
+  filter(date != "2020-03-02")
+
+ggplot(data = TimeGender_cleaned, aes(x = as.Date(date), y = new_confirmed, colour = sex)) +
+  geom_smooth() +
+  scale_color_manual(values = c("blue4", "deepskyblue1")) +
+  theme_minimal() +
+  labs(
+    title = "Higher COVID-19 Case Rates Among Women in Early Stages of the Pandemic",
+    subtitle = "Gender-wise COVID-19 Case Distribution Over Time, Data from 20/01/2020 to 30/06/2020",
+    y = "Number of COVID-cases"
+  ) + 
+  xlab(NULL) +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  ) 
+
+ggplot(data = TimeGender_cleaned, aes(x = as.Date(date), y = new_deceased, colour = sex)) +
+  geom_smooth() +
+  scale_color_manual(values = c("blue4", "deepskyblue1")) +
+  theme_minimal() +
+  labs(
+    title = "Equal COVID-19 Fatality Rates Among Men and Women",
+    subtitle = "Gender-wise COVID-19 Mortality Distribution Over Time, Data from 20/01/2020 to 30/06/2020",
+    y = "Number of People Deceased due to COVID-19"
+  ) + 
+  xlab(NULL) +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  ) 
+
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Visualisation 4: Region contributing factors to Mortality
+
+## Summarize confirmed and deceased cases by province
+
+# Calculate new cases, new tests, and new deceased
+summary_timeProvince <- TimeProvince %>%
+  filter(date=="2020-06-30")
+
+## Join with the Region dataset
+combined_data <- Region %>%
+  inner_join(summary_timeProvince, by = "province")
+
+## Selecting relevant columns for correlation
+correlation_data <- combined_data %>%
+  select(elementary_school_count, kindergarten_count, university_count,
+         academy_ratio, elderly_population_ratio, elderly_alone_ratio,
+         nursing_home_count, confirmed, released, deceased)
+
+## Compute correlation matrix
+correlation_matrix <- cor(correlation_data, use = "complete.obs")
+
+```
+
+1. Low Correlation with School Counts: Elementary, kindergarten, and university counts have very low correlations with both confirmed and deceased cases. This suggests that the number of these educational institutions in a region did not significantly impact COVID-19 spread or mortality.
+2. Moderate Correlation with Academy Ratio: The academy ratio shows a moderate positive correlation with confirmed cases. This might indicate that regions with a higher concentration of academies had slightly higher infection rates.
+
+3. Negative Correlation with Elderly Population Ratios: Interestingly, both elderly population ratio and elderly alone ratio show a small negative correlation with confirmed and deceased cases. This could suggest that regions with higher elderly populations didn't necessarily experience more severe outbreaks, contrary to what might be expected.
+4. Positive Correlation with Nursing Home Count: There’s a positive correlation with nursing home count, although it's not very strong. This might indicate that regions with more nursing homes had slightly higher confirmed and deceased cases, which aligns with global trends where nursing homes were often hotspots.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+
+## Academic ratio correlation 
+correlation_academic_ratio <- cor(combined_data$academy_ratio, combined_data$confirmed)
+
+ggplot(combined_data, aes(x = academy_ratio, y = confirmed)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "blue") +
+  theme_minimal() +
+  labs(title = paste("Positive correlation between Academy Ratio and COVID-19 Cases (", round(correlation_academic_ratio, 2), ")"),
+       x = "Academy Ratio",
+       y = "Total Confirmed Cases") + 
+    theme(
+    plot.title = element_text(size = 12, face = "bold")
+  )
+
+## Elderly population correlation 
+
+correlation_elderly_pop <- cor(combined_data$elderly_population_ratio, combined_data$confirmed)
+
+ggplot(combined_data, aes(x = elderly_population_ratio, y = confirmed)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "red") +
+  theme_minimal() +
+  labs(title = "Elderly Population Ratio vs. Total Confirmed COVID-19 Cases",
+       subtitle = paste("Negative correlation (", round(correlation_elderly_pop, 2), ") challenges expectations"),
+       x = "Elderly Population Ratio",
+       y = "Total Confirmed Cases") + 
+    theme(
+    plot.title = element_text(size = 12, face = "bold")
+  )
+
+correlation_elderly_pop_deceased <- cor(combined_data$elderly_population_ratio, combined_data$deceased)
+
+ggplot(combined_data, aes(x = elderly_population_ratio, y = deceased)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "red") +
+  theme_minimal() +
+  labs(title = "Elderly Population Ratio vs. COVID-19 Mortality",
+       subtitle = paste("Negative correlation (", round(correlation_elderly_pop_deceased, 2), ") challenges expectations"),
+       x = "Elderly Population Ratio",
+       y = "Amount of People Deceased due to COVID-19") + 
+    theme(
+    plot.title = element_text(size = 12, face = "bold")
+  )
+
+
+## Nursing home correlation, without two extreme values
+
+threshold_value <- 4000  
+filtered_data <- combined_data %>%
+  filter(nursing_home_count <= threshold_value)
+
+correlation_nursing_home <- cor(filtered_data$nursing_home_count, filtered_data$confirmed)
+
+ggplot(filtered_data, aes(x = nursing_home_count, y = confirmed)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "green") +
+  theme_minimal() +
+  labs(title = paste("Positive correlation between Nursing Home Count and COVID-19 Cases (",round(correlation_nursing_home, 2),")"),
+       x = "Nursing Home Count",
+       y = "Total Confirmed Cases")+ 
+  theme(
+  plot.title = element_text(size = 12, face = "bold")
+  )
+
+correlation_nursing_home_deceased <- cor(filtered_data$nursing_home_count, filtered_data$deceased)
+
+ggplot(filtered_data, aes(x = nursing_home_count, y = deceased)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "green") +
+  theme_minimal() +
+  labs(title = paste("No correlation between Nursing Home Count and COVID-19 Cases"),
+       x = "Nursing Home Count",
+       y = "Total Confirmed Cases")+ 
+  theme(
+  plot.title = element_text(size = 12, face = "bold")
+  )
+
+```
+# Policies during COVID - 19
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Convert date columns to Date format
+Policy$start_date <- as.Date(Policy$start_date)
+Policy$end_date <- as.Date(Policy$end_date)
+
+# Filter out policies with missing end dates
+Policy <- Policy[!is.na(Policy$end_date), ]
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Bar plot of policy types 
+#The below graph shows the distribution of policy type by graphs depicting the education policies to have run for the highest number of times
+
+Policy_summary <- Policy %>%
+  group_by(type) %>%
+  summarize(Count = n()) %>%
+  arrange(desc(Count))
+
+# Create the bar chart with ordered bars
+ggplot(Policy_summary, aes(x = reorder(type, -Count), y = Count)) +
+  geom_bar(stat = "identity", fill = "blue4") +
+  labs(title = "COVID-19 Policies During the First Half of 2020 Focus on Education",
+       subtitle = "Examining Policy Types from 20/01/2020 to 30/06/2020",
+       x = "Policy Types") +
+  ylab(NULL) +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  )
+
+# Timeline plot of policies 
+#The below graph shows what policy was introduced during what stage of the pandemic, understanding the social dymanic at each stage
+
+ggplot(Policy, aes(x = start_date, y = fct_reorder(type, start_date), label = type)) +
+  geom_point(color = "blue4") +
+  geom_text_repel() +
+  labs(title = "A Shift Towards Administrative, Transformation and Health Policies in the 2nd Quarter of 2020", subtitle = "Timeline of Government Policies from 20/01/2020 to 30/06/2020",
+       x = "Start Date", y = "Policy Types") +
+  theme_minimal() + 
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold", hjust = 0.43),
+    plot.subtitle = element_text(size = 11, hjust = -0.5)
+  ) 
+
+
+```
+
+# Policy Impact on COVID - 19
+
+Reading and cleaning the policy data.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+
+# Replacing NA in 'end_date' with a default date and converting to Date type
+policy_data_cleaned <- Policy %>%
+  mutate(end_date = ifelse(is.na(end_date), "2020-06-30", as.character(end_date)),
+         end_date = as.Date(end_date, format="%Y-%m-%d"))
+```
+
+Reading and Cleaning Time-Series data. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+
+# Calculating new cases, tests, and deceased, ensuring 'date' is in Date format
+time_data_cleaned <- Time %>%
+  mutate(
+    new_tests = ifelse(row_number() == 1, test, test - lag(test)),
+    new_confirmed = ifelse(row_number() == 1, confirmed, confirmed - lag(confirmed)),
+    new_deceased = ifelse(row_number() == 1, deceased, deceased - lag(deceased)),
+    date = as.Date(date, format="%Y-%m-%d")  
+  )
+
+```
+
+Defining a function to calculate the number of active policies on a given date.
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+active_policies_on_date <- function(date, policies) {
+  active_policies <- policies %>%
+    filter(start_date <= date & end_date >= date)
+  return(nrow(active_policies))
+}
+
+# Applying the function to get the active policy count for each date
+time_data_cleaned <- time_data_cleaned %>%
+  rowwise() %>%
+  mutate(active_policy_count = active_policies_on_date(date, policy_data_cleaned))
+
+```
+
+Now we make a plot which shows the number of new confirmed cases and active policies over time to see if there is any relationship. We also highlight the period where key policies including the first strong Social Distancing campaign, and the drive through screening centers. 
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Highlighting a specific period in the data
+time_data_cleaned$highlight <- ifelse(time_data_cleaned$date >= as.Date("2020-02-23") & 
+                                      time_data_cleaned$date <= as.Date("2020-02-29"), 
+                                      "Key Policy Period", NA)
+
+# Plotting confirmed cases and active policies over time with dynamic y-axis limits
+ratio <- 20
+max_confirmed <- max(time_data_cleaned$new_confirmed, na.rm = TRUE)
+upper_limit <- ceiling(max_confirmed / 200) * 200  
+
+# Plotting the data with ggplot2
+ggplot(time_data_cleaned, aes(x = date)) +
+  geom_rect(data = subset(time_data_cleaned, !is.na(highlight)), 
+            aes(xmin = as.Date("2020-02-23"), xmax = as.Date("2020-02-29"), 
+                ymin = -Inf, ymax = Inf, fill = highlight), alpha = 0.9) +
+  geom_line(aes(y = new_confirmed, colour = "Daily Confirmed Cases"),size=1) +
+  geom_line(aes(y = active_policy_count * ratio, colour = "Number of Active Policies"),size=0.9) +
+  scale_fill_manual(name = "Highlight", 
+                    values = c("Key Policy Period" = "yellow"), 
+                    labels = c("Key Policy Period" = "Introduction of Key Policies")) +
+  guides(fill = guide_legend(override.aes = list(alpha = 0.7))) +
+  scale_colour_manual("", 
+                      breaks = c("Daily Confirmed Cases", "Number of Active Policies"),
+                      values = c("brown1", "blue4")) +
+  scale_y_continuous("Daily Confirmed Cases", 
+                     sec.axis = sec_axis(~ . / ratio, name = "Number of Active Policies"),
+                     limits = c(0, upper_limit),  # Dynamically set the upper limit
+                     breaks = seq(0, upper_limit, by = 200)) +  # Set breaks to match the adjusted limits
+  labs(title = "Daily Confirmed COVID-19 Cases and Number of Active Policies Over Time",
+       subtitle = 'Data from 20/01/2020 to 30/06/2020',
+       x = "Date", y = "Daily Confirmed Cases") +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(color = "brown1"),
+    axis.text.y = element_text(color = "brown1"),
+    axis.title.y.right = element_text(color = "blue4"),
+    axis.text.y.right = element_text(color = "blue4"),
+    legend.position = "bottom",
+    legend.title = element_blank(), # Remove the title of the legend if not needed
+    panel.grid.major.y = element_line(),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(), # Remove vertical gridlines
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.background = element_blank(), # Remove legend background
+    legend.key = element_blank(),  # Remove legend key boxes
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  ) 
+```
+The yellow highlighted period shows the period of introduction of some key policies, including social distancing, Infectious Disease alert level 4, and drive through screening centers. We can 
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Calculate the scaling factor for the secondary axis
+# This will scale the active policies down to fit the range of new_deceased
+# Define the maximum values for new_deceased and active_policy_count
+max_deceased <- max(time_data_cleaned$new_deceased, na.rm = TRUE)
+max_policy_count <- max(time_data_cleaned$active_policy_count, na.rm = TRUE)
+
+# Calculate the scaling factor for the secondary axis
+#scaling_factor <- max_deceased / max_policy_count
+scaling_factor <- 0.2
+# Plotting the data with ggplot2
+ggplot(time_data_cleaned, aes(x = date)) +
+  # Draw the yellow highlight for the key policy period
+  geom_rect(data = subset(time_data_cleaned, !is.na(highlight)), 
+            aes(xmin = as.Date("2020-02-23"), xmax = as.Date("2020-02-29"), 
+                ymin = -Inf, ymax = Inf, fill = highlight), alpha = 0.1) +
+  # Add a line for the new_deceased
+  geom_line(aes(y = new_deceased, colour = "New Deceased"),size=1.1) +
+  # Add a line for the active_policy_count, scaled to fit the graph
+  geom_line(aes(y = active_policy_count * scaling_factor, colour = "Number of Active Policies"),size=1.1) +
+  # Define the fill color for the highlight and make the legend key solid
+  scale_fill_manual(name = "Highlight", 
+                    values = c("Key Policy Period" = "yellow"), 
+                    labels = c("Key Policy Period" = "Introduction of Key Policies, Including Social Distancing")) +
+  guides(fill = guide_legend(override.aes = list(alpha = 1))) +
+  # Set the colors for the lines
+  scale_colour_manual(values = c("New Deceased" = "red", "Number of Active Policies" = "darkblue")) +
+  # Set the y-axis for new_deceased and create the secondary y-axis for active_policy_count
+  scale_y_continuous("New Deceased", 
+                     sec.axis = sec_axis(~ . / scaling_factor, name = "Number of Active Policies"),
+                     limits = c(0, 10),  # Set the upper limit to 8 as specified
+                     breaks = seq(0, 10, by = 2)) +  # Set breaks to go up in steps of 2 y-axis
+  # Add labels and titles
+  labs(title = "Daily COVID-19 Deceased and Number of Active Policies Over Time",
+       subtitle = "Data from 20/01/2020 to 30/06/2020",
+       x = "Date", y = "Number of New Deceased") +
+  # Apply the minimal theme
+  theme_minimal() +
+  # Adjust text elements
+  theme(axis.title.y = element_text(color = "red"),
+        axis.text.y = element_text(color = "red"),
+        axis.title.y.right = element_text(color = "darkblue"),
+        axis.text.y.right = element_text(color = "darkblue"),
+        legend.position = "bottom",
+        legend.title = element_blank(),
+        panel.grid.major.y = element_line(color = "grey80"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  # Remove the gridlines
+  theme(panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank())
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+
+# Calculate the moving average for new_deceased
+time_data_cleaned$moving_average_deceased <- rollmean(time_data_cleaned$new_deceased, k = 7, fill = NA, align = 'right')
+
+# Calculate the scaling factor for the secondary axis
+#scaling_factor <- max(time_data_cleaned$moving_average_deceased, na.rm = TRUE) / #max(time_data_cleaned$active_policy_count, na.rm = TRUE)
+scaling_factor <- 0.2
+# Plotting the data with ggplot2
+ggplot(time_data_cleaned, aes(x = date)) +
+  geom_rect(data = subset(time_data_cleaned, !is.na(highlight)), 
+            aes(xmin = as.Date("2020-02-23"), xmax = as.Date("2020-02-29"), 
+                ymin = -Inf, ymax = Inf, fill = highlight), alpha = 0.1) +
+  geom_line(aes(y = moving_average_deceased, colour = "Moving Average New Deceased"),size=0.95) +
+  geom_line(aes(y = active_policy_count * scaling_factor, colour = "Number of Active Policies"),size=0.95) +
+  scale_fill_manual(name = "Highlight", 
+                    values = c("Key Policy Period" = "yellow"), 
+                    labels = c("Key Policy Period" = "Introduction of Key Policies")) +
+  guides(fill = guide_legend(override.aes = list(alpha = 0.7))) +
+  scale_colour_manual("", 
+                      breaks = c("Moving Average New Deceased", "Number of Active Policies"),
+                      values = c("Moving Average New Deceased" = "brown1", "Number of Active Policies" = "blue4")) +
+  scale_y_continuous("New Deceased", 
+                     sec.axis = sec_axis(~ . / scaling_factor, name = "Number of Active Policies"),
+                     limits = c(0, 10),  # Set the upper limit to 8 as specified
+                     breaks = seq(0, 10, by = 2)) +  # Set breaks to go up in steps of 2
+
+  labs(title = "Daily COVID-19 Deceased and Number of Active Policies Over Time",
+       subtitle = "Data from 20/01/2020 to 30/06/2020",
+       x = "Date", y = "Number of New Deceased (7-day Moving Average)") +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(color = "brown1"),
+    axis.text.y = element_text(color = "brown1"),
+    axis.title.y.right = element_text(color = "blue4"),
+    axis.text.y.right = element_text(color = "blue4"),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    panel.grid.major.y = element_line(),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  ) 
+
+```
+
+
+
+
+
+# Search Trends And COVID - 19
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Convert the 'date' column to a Date object
+SearchTrend$date <- as.Date(SearchTrend$date)
+# Reshape the data from wide to long format
+longSearchTrend <- gather(SearchTrend, key = "condition", value = "searchVolume", -date)
+# Create a ggplot object for visualization
+
+ggplot(longSearchTrend, aes(x = date, y = searchVolume, color = condition)) +
+  geom_smooth() +
+  scale_color_manual(values = c("deepskyblue", "blue3", "chartreuse3", "brown1")) +
+  scale_y_log10() +
+  theme_minimal() +
+  labs(
+    title = "Search Volume Surge at the Beginning of 2020", 
+    subtitle = "Logarithmic Search Volume over Time"
+  ) +
+  xlab(NULL) + 
+  ylab(NULL) +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11)
+  )
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE,}
+# Convert the 'date' column to a Date object
+SearchTrend$date <- as.Date(SearchTrend$date)
+# Reshape the 'SearchTrend' dataframe from wide to long format
+longSearchTrend <- gather(SearchTrend, key = "condition", value = "searchVolume", -date)
+# Filter 'longSearchTrend' for entries from 2020 onwards
+filteredSearchTrend <- longSearchTrend %>%
+  filter(date >= as.Date("2020-01-01")) %>% 
+  filter(condition == "coronavirus")
+# Filter and transform the 'Policy' dataframe
+edittedPolicy <- Policy %>%
+  filter(type %in% c("Alert", "Social", "Administrative", "Transformation")) %>% 
+  transform(type = factor(type, levels = c("Alert", "Social", "Administrative", "Transformation")))
+# Create a ggplot of the filtered search trend data
+ggplot(filteredSearchTrend, aes(x = date, y = searchVolume, color = condition)) +
+  geom_smooth(color = "blue", linewidth = 0.7) +
+  scale_y_log10() +
+  theme_minimal() +
+  # Format the x-axis to show date labels by month
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  # Adding vertical lines for policy start dates
+  geom_vline(data = edittedPolicy, aes(xintercept = as.Date(start_date)), 
+             color = "brown1", linetype = "dashed") +
+  # Faceting by policy type
+  facet_wrap(~type, 
+             labeller = labeller(type = 
+                                   c("Alert" = "Infectious Disease Alert",
+                                     "Social" = "Social Distancing Policy",
+                                     "Administrative" = "Public Facilities Shutdown Policy",
+                                     "Transformation" = "Mask Wearing and Other Policy")),
+             scales = "free_y") +
+  labs(title = "Public Awareness Online Demonstrates an Inverse U-Shape", 
+       subtitle = "Log Search Volume vs. Time (Labelled with Implementation of Key Policies)",
+       x = "", 
+       y = "") +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.background = element_blank(),
+    plot.title = element_text(size = 13, face = "bold"),
+    plot.subtitle = element_text(size = 11),
+    axis.text.x = element_text(size = 8))
+```
+
+
+
+
