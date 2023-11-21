@@ -1,6 +1,6 @@
 ---
 title: "Data visualisation - Final Group Project – Poster Presentation"
-author: "Study Group 3 - Dan Thompson, Xi Chen, Alvaro Romero, Mahah Sadique, Guangbin Yu and Marie Dujardin"
+author: "Study Group 3 - Dan Thompson, Xi Chen, Alvaro Romero, Mahah Sadique Sultan, Guangbin Yu and Marie Dujardin"
 date: "21 November 2023"
 output:
   html_document:
@@ -55,7 +55,6 @@ library(tidyquant)
 ```
 
 ```{r, load datasets, echo=FALSE, warning=FALSE, message=FALSE,}
-
 Region <- read_csv("~/Documents/Data visualisation/Region.csv")
 Case <- read_csv("~/Documents/Data visualisation/Case.csv")
 PatientInfo <- read_csv("~/Documents/Data visualisation/PatientInfo.csv")
